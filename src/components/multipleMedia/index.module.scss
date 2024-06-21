@@ -1,0 +1,84 @@
+$form-width: 400px;
+$message-bg: #f1f1f1;
+$message-border-radius: 8px;
+$message-padding: 10px;
+$message-margin-bottom: 10px;
+$button-bg: #007bff;
+$button-hover-bg: darken($button-bg, 10%);
+$button-color: #fff;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px auto;
+  width: $form-width;
+  padding: 20px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  background-color: #fff;
+
+  .antFormItem {
+    width: 100%;
+  }
+
+  .messages {
+    margin-top: 20px;
+    width: 100%;
+
+    .message {
+      background-color: $message-bg;
+      border-radius: $message-border-radius;
+      padding: $message-padding;
+      margin-bottom: $message-margin-bottom;
+      word-wrap: break-word;
+    }
+  }
+
+  .fileInput {
+    margin-top: 10px;
+    width: 100%;
+
+    input[type='file'] {
+      display: none;
+    }
+
+    label {
+      display: block;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      cursor: pointer;
+      text-align: center;
+    }
+  }
+
+  .mediaControls {
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+
+    button {
+      flex: 1;
+      margin: 0 5px;
+    }
+  }
+
+  .videoContainers {
+    display: flex;
+    gap: 10px;
+    .videoContainer {
+      margin-top: 20px;
+      video {
+        width: 100%;
+        border-radius: 10px;
+      }
+    }
+  }
+
+  .fileName {
+    margin-top: 10px;
+    font-weight: bold;
+  }
+}
