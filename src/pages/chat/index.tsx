@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import style from './index.module.scss';
 import { Button, Col, Form, Image, Input, InputRef, Row } from 'antd';
-import WebRTC from '@ewents/rtc';
+import WebRTC from 'ewents-rtc';
 import {
   FileAddOutlined,
   SendOutlined,
