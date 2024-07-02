@@ -1,17 +1,12 @@
-import { Home, Media } from 'pages';
+import { Chat } from 'pages';
 
 export const ROUTE = {
-  home: '/:id',
-  media: '/media/:id',
+  chat: '/',
 };
 
 export const ROUTES_DATA = [
   {
-    path: ROUTE.home,
-    component: <Home />,
-  },
-  {
-    path: ROUTE.media,
-    component: <Media />,
+    path: ROUTE.chat,
+    component: <Chat />,
   },
 ];
