@@ -1,6 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import style from './index.module.scss';
-import { Button, Col, Form, Image, Input, InputRef, Row } from 'antd';
+import {
+  Button,
+  Card,
+  Col,
+  Form,
+  Image,
+  Input,
+  InputRef,
+  notification,
+  Row,
+} from 'antd';
 import WebRTC from 'ewents-rtc';
 import {
   FileAddOutlined,
@@ -11,7 +21,10 @@ import {
   EyeOutlined,
   PoweroffOutlined,
   PhoneOutlined,
+  CloseCircleOutlined,
 } from '@ant-design/icons';
+import { useSearchParams } from 'react-router-dom';
+import { CopyOutlined } from '@ant-design/icons';
 
 const scrollToBottom = (div: HTMLHtmlElement) => {
   if (div) {
@@ -24,6 +37,7 @@ const Cameras = ({ hostStream, remoteStream }) => (
     <div className={style['call-host']}>
       <video
         autoPlay
+        muted
         ref={(video) => {
           if (video) {
             video.srcObject = hostStream;
@@ -45,8 +59,12 @@ const Cameras = ({ hostStream, remoteStream }) => (
 );
 
 export const Chat = () => {
-  const [from] = Form.useForm();
+  const [form] = Form.useForm();
+  const [searchParams] = useSearchParams();
+  const isSecure = searchParams.get('is-secure') === 'true';
+
   const [rtc, setRTC] = useState<WebRTC>();
+  const [secureCodeValue, setSecureCode] = useState<string | undefined>();
   const input = useRef<InputRef>();
   const [messages, setMessages] = useState<
     {
@@ -62,12 +80,11 @@ export const Chat = () => {
   const [isCall, initCall] = useState(false);
   const [videoOn, setVideo] = useState(true);
   const [audioOn, setAudio] = useState(true);
-
-  const login = ({ id, peerId }) => {
-    setConnecting(true);
+  const [lvl, setLvl] = useState<any>();
+  const login = async ({ id, peerId, secureCode: secureCodeFrom }) => {
     const webRTC = new WebRTC({
       clientKey: '66760d2b14813c0e8b53b4ff',
-      peerId: id,
+      orchestratorUrl: 'ws://localhost:3001',
       onReceiveData: (message) => setMessages((prev) => [...prev, message]),
       onReceiveFile: ({ fileName, percentage, file }) => {
         console.log(`Received file: ${fileName}, ${percentage}`, file);
@@ -79,11 +96,12 @@ export const Chat = () => {
           ]);
         }
       },
-      onConnectionStateChange: (state) => {
-        const isConencted = state === 'connected';
+      onCommunicationState: (connectionState) => {
+        setConnecting(connectionState === 'connecting');
+        const isConencted = ['weak', 'full'].includes(connectionState);
+        setLvl(connectionState);
         setConnected(isConencted);
-        if (state === 'closed') {
-          setConnecting(false);
+        if (connectionState === 'none') {
           cleanData();
         }
       },
@@ -96,9 +114,23 @@ export const Chat = () => {
       },
     });
 
-    webRTC.startConnection(peerId);
-
     setRTC(webRTC);
+
+    const secureCode = await webRTC
+      .startConnection(peerId, {
+        callback: setSecureCode,
+        secureCode: secureCodeFrom,
+        peerId: id,
+        isSecure,
+        isLog: true,
+      })
+      .catch(({ reason }) => {
+        notification.error({ message: reason });
+        return undefined;
+      });
+
+    setSecureCode(secureCode);
+    form.setFieldValue('secureCode', secureCode);
   };
 
   const closeConnection = () => {
@@ -107,8 +139,11 @@ export const Chat = () => {
   };
 
   const cleanData = () => {
+    hostStream?.getTracks().forEach((track) => track.stop());
     setMessages([]);
+    form.resetFields();
     setRTC(undefined);
+    setSecureCode(undefined);
     setRemoteStream(undefined);
     setHostStream(undefined);
     setConnecting(false);
@@ -116,9 +151,9 @@ export const Chat = () => {
 
   const sendMessage = async ({ message }) => {
     if (message?.length) {
-      from.resetFields();
+      form.resetFields();
       setMessages((prev) => [...prev, { type: 'host', message }]);
-      rtc.sendData({ type: 'remote', message });
+      rtc.sendData({ type: 'remote', message }, console.log).then(console.log);
     }
   };
 
@@ -140,9 +175,7 @@ export const Chat = () => {
         input.current.focus();
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
-
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
@@ -188,30 +221,75 @@ export const Chat = () => {
     <div className={style.chat}>
       {(!connected && (
         <div className={style.login}>
-          <Form layout="vertical" form={from} onFinish={login}>
-            <Form.Item
-              label="Identifier"
-              name="id"
-              rules={[{ required: true }]}
-            >
-              <Input maxLength={10} showCount />
-            </Form.Item>
-            <Form.Item
-              label="Peer Identifier"
-              name="peerId"
-              rules={[{ required: true }]}
-            >
-              <Input maxLength={10} showCount />
-            </Form.Item>
+          <Card>
+            <Form layout="vertical" form={form} onFinish={login}>
+              <Form.Item
+                label="Identifier"
+                name="id"
+                rules={[{ required: true }]}
+              >
+                <Input maxLength={10} showCount />
+              </Form.Item>
+              <Form.Item
+                label="Peer Identifier"
+                name="peerId"
+                rules={[{ required: true }]}
+              >
+                <Input maxLength={10} showCount />
+              </Form.Item>
 
-            <Button
-              htmlType="submit"
-              className={style.button}
-              loading={connecting}
-            >
-              {connecting ? 'Waiting for peer' : 'Connect'}
-            </Button>
-          </Form>
+              {isSecure && (
+                <Form.Item label="Secure Code" name="secureCode">
+                  <Input
+                    value={secureCodeValue}
+                    suffix={
+                      (secureCodeValue && (
+                        <Button
+                          icon={<CopyOutlined />}
+                          onClick={() => {
+                            navigator.clipboard.writeText(secureCodeValue).then(
+                              () => {
+                                notification.success({
+                                  message: 'Copied to clipboard!',
+                                });
+                              },
+                              () => {
+                                notification.error({
+                                  message: 'Error',
+                                });
+                              },
+                            );
+                          }}
+                        />
+                      )) || <></>
+                    }
+                  />
+                </Form.Item>
+              )}
+              <Row gutter={8}>
+                <Col span={connecting ? 18 : 24}>
+                  <Button
+                    htmlType="submit"
+                    className={style.button}
+                    loading={connecting}
+                  >
+                    {connecting ? 'Waiting for peer' : 'Connect'}
+                  </Button>
+                </Col>
+                {connecting && (
+                  <Col span={6}>
+                    <Button
+                      htmlType="button"
+                      onClick={closeConnection}
+                      className={style.closeButton}
+                      danger
+                      icon={<CloseCircleOutlined />}
+                    />
+                  </Col>
+                )}
+              </Row>
+            </Form>
+          </Card>
         </div>
       )) || (
         <div className={style.content}>
@@ -240,7 +318,7 @@ export const Chat = () => {
               })}
             </div>
 
-            <Form form={from} onFinish={sendMessage}>
+            <Form form={form} onFinish={sendMessage}>
               <Form.Item name="message" style={{ margin: 0 }}>
                 <Row gutter={10}>
                   <Col span={18}>
@@ -254,22 +332,24 @@ export const Chat = () => {
                   </Col>
                   <Col span={6}>
                     <Row>
-                      <Col span={12}>
-                        <input
-                          type="file"
-                          accept=".png,.jpeg,.jpg"
-                          onChange={handleFileChange}
-                          style={{ display: 'none' }}
-                          id="fileInput"
-                        />
-                        <Button
-                          htmlType="button"
-                          icon={<FileAddOutlined />}
-                          onClick={() =>
-                            document.getElementById('fileInput').click()
-                          }
-                        />
-                      </Col>
+                      {lvl === 'full' && (
+                        <Col span={12}>
+                          <input
+                            type="file"
+                            accept=".png,.jpeg,.jpg"
+                            onChange={handleFileChange}
+                            style={{ display: 'none' }}
+                            id="fileInput"
+                          />
+                          <Button
+                            htmlType="button"
+                            icon={<FileAddOutlined />}
+                            onClick={() =>
+                              document.getElementById('fileInput').click()
+                            }
+                          />
+                        </Col>
+                      )}
                       <Col span={12}>
                         <Button icon={<SendOutlined />} htmlType="submit" />
                       </Col>
@@ -279,27 +359,33 @@ export const Chat = () => {
               </Form.Item>
             </Form>
           </div>
-          <div className={style.call}>
-            <Cameras hostStream={hostStream} remoteStream={remoteStream} />
-            <div className={style.controllers}>
-              {isCall && (
-                <>
-                  <Button
-                    icon={videoOn ? <EyeOutlined /> : <EyeInvisibleOutlined />}
-                    onClick={toggleVideo}
-                  />
-                  <Button
-                    icon={audioOn ? <AudioOutlined /> : <AudioMutedOutlined />}
-                    onClick={toggleAudio}
-                  />
-                </>
-              )}
-              <Button
-                icon={!isCall ? <PhoneOutlined /> : <PoweroffOutlined />}
-                onClick={() => (!isCall ? startCall() : hangOff())}
-              />
+          {lvl === 'full' && (
+            <div className={style.call}>
+              <Cameras hostStream={hostStream} remoteStream={remoteStream} />
+              <div className={style.controllers}>
+                {isCall && (
+                  <>
+                    <Button
+                      icon={
+                        videoOn ? <EyeOutlined /> : <EyeInvisibleOutlined />
+                      }
+                      onClick={toggleVideo}
+                    />
+                    <Button
+                      icon={
+                        audioOn ? <AudioOutlined /> : <AudioMutedOutlined />
+                      }
+                      onClick={toggleAudio}
+                    />
+                  </>
+                )}
+                <Button
+                  icon={!isCall ? <PhoneOutlined /> : <PoweroffOutlined />}
+                  onClick={() => (!isCall ? startCall() : hangOff())}
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

@@ -2,6 +2,8 @@
   width: 100%;
   height: 100%;
   display: flex;
+  overflow: auto;
+  padding: 10px;
 
   .login {
     margin: auto;
@@ -12,8 +14,12 @@
   }
 
   .button {
-    width: fit-content;
+    width: 100%;
     margin: auto;
+  }
+
+  .closeButton {
+    width: 100%;
   }
 
   .content {
@@ -21,6 +27,8 @@
     margin: auto;
     gap: 20px;
     overflow: hidden;
+    flex-wrap: wrap;
+    justify-content: center;
 
     .chat-content {
       height: 300px;
