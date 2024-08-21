@@ -10,6 +10,7 @@ import {
   InputRef,
   notification,
   Row,
+  Switch,
 } from 'antd';
 import WebRTC from 'ewents-rtc';
 import {
@@ -23,7 +24,6 @@ import {
   PhoneOutlined,
   CloseCircleOutlined,
 } from '@ant-design/icons';
-import { useSearchParams } from 'react-router-dom';
 import { CopyOutlined } from '@ant-design/icons';
 
 const scrollToBottom = (div: HTMLHtmlElement) => {
@@ -58,11 +58,11 @@ const Cameras = ({ hostStream, remoteStream }) => (
   </div>
 );
 
+const orchestratorUrl = import.meta.env.VITE_APP_BACKEND_URL;
+
 export const Chat = () => {
   const [form] = Form.useForm();
-  const [searchParams] = useSearchParams();
-  const isSecure = searchParams.get('is-secure') === 'true';
-
+  const [isSecure, setIsSecure] = useState(false);
   const [rtc, setRTC] = useState<WebRTC>();
   const [secureCodeValue, setSecureCode] = useState<string | undefined>();
   const input = useRef<InputRef>();
@@ -81,10 +81,11 @@ export const Chat = () => {
   const [videoOn, setVideo] = useState(true);
   const [audioOn, setAudio] = useState(true);
   const [lvl, setLvl] = useState<any>();
+
   const login = async ({ id, peerId, secureCode: secureCodeFrom }) => {
     const webRTC = new WebRTC({
       clientKey: '66760d2b14813c0e8b53b4ff',
-      orchestratorUrl: 'ws://localhost:3001',
+      orchestratorUrl,
       onReceiveData: (message) => setMessages((prev) => [...prev, message]),
       onReceiveFile: ({ fileName, percentage, file }) => {
         console.log(`Received file: ${fileName}, ${percentage}`, file);
@@ -222,18 +223,35 @@ export const Chat = () => {
       {(!connected && (
         <div className={style.login}>
           <Card>
+            <div
+              style={{
+                marginBottom: '10px',
+                display: 'flex',
+                justifyContent: 'flex-end',
+              }}
+            >
+              <Switch
+                unCheckedChildren={'Not Secure'}
+                checkedChildren={'Secure'}
+                checked={isSecure}
+                onChange={setIsSecure}
+              />
+            </div>
+
             <Form layout="vertical" form={form} onFinish={login}>
               <Form.Item
                 label="Identifier"
                 name="id"
-                rules={[{ required: true }]}
+                rules={[{ required: true, message: 'Identifier is required.' }]}
               >
                 <Input maxLength={10} showCount />
               </Form.Item>
               <Form.Item
                 label="Peer Identifier"
                 name="peerId"
-                rules={[{ required: true }]}
+                rules={[
+                  { required: true, message: 'Peer Identifier is required.' },
+                ]}
               >
                 <Input maxLength={10} showCount />
               </Form.Item>
