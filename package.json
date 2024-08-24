@@ -5,10 +5,11 @@
   "scripts": {
     "start": "npm run dev",
     "dev": "vite --mode dev --host",
-    "deploy": "tsc && vite build --mode dev && firebase use dev && firebase deploy"
+    "deploy": "tsc && vite build --mode prod && firebase use dev && firebase deploy"
   },
   "dependencies": {
     "antd": "^5.15.0",
+    "ewents-rtc": "^1.1.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.2"

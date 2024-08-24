@@ -5,4 +5,4 @@ coverage
 /lib/*.ts
 /lib/example
 /lib/*.js
-.env
+.env*

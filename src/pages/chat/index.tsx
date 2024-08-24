@@ -231,6 +231,7 @@ export const Chat = () => {
               }}
             >
               <Switch
+                disabled={connecting}
                 unCheckedChildren={'Not Secure'}
                 checkedChildren={'Secure'}
                 checked={isSecure}
